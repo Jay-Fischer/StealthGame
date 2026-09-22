@@ -5,11 +5,16 @@ using System.Collections.Generic;
 
 public class Navigator : MonoBehaviour
 {
-    NavMeshAgent agent;
+    [SerializeField] NavMeshAgent agent;
+    [SerializeField] Transform[] patrolPoints;
+    Transform currentPatrolPoint;
+    int PatrolPointIndex;
+
     Rigidbody rb;
     
     [SerializeField] float moveSpeed = 3;
-    [SerializeField] Transform target;
+
+   
 
     float timesSinceLastDestination;
     NavMeshPath currentPath;
@@ -20,6 +25,12 @@ public class Navigator : MonoBehaviour
     void Start()
     {
         agent = GetComponent<NavMeshAgent>();
+
+        currentPatrolPoint = patrolPoints[0];
+        agent.SetDestination(currentPatrolPoint.position);
+
+
+        
         rb = GetComponent<Rigidbody>();
 
         currentPath = new NavMeshPath();
@@ -29,6 +40,23 @@ public class Navigator : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        float distance = Vector3.Distance(transform.position, currentPatrolPoint.position);
+
+        if(distance < 1){
+            PatrolPointIndex++;
+            if (PatrolPointIndex >= patrolPoints.Length)
+            {
+                PatrolPointIndex = 0;
+            }
+            currentPatrolPoint = patrolPoints[PatrolPointIndex];
+            agent.SetDestination(currentPatrolPoint.position);
+
+        }
+
+
+
+
+        /*
         if (timesSinceLastDestination > 0.5f)
         {
             //agent.SetDestination(target.position);
@@ -69,10 +97,11 @@ public class Navigator : MonoBehaviour
             {
                 currentCorner = remainingPoints.Dequeue();
             }
-        }
+        }*/
+        
     }
 
-    private void FixedUpdate()
+    /*private void FixedUpdate()
     {
         rb.linearVelocity = transform.forward * moveSpeed;
     }
@@ -88,5 +117,5 @@ public class Navigator : MonoBehaviour
         {
             Gizmos.DrawSphere(point, 1);
         }
-    }
+    }*/
 }
