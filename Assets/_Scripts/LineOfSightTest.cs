@@ -1,41 +1,22 @@
+using Unity.VisualScripting;
 using UnityEngine;
 
 public class LineOfSightTest : MonoBehaviour
 {
+
+    [Header("Targeting")]
     [SerializeField] Transform target;
-
-    enum State {idle, patrol, pursue, dead};
-
-    State myState = State.idle;
-
+    Navigator nav;
+    public LayerMask targetLayers;
     float dot;
 
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
+    private void Awake()
     {
-        
+        nav = GetComponent<Navigator>();
     }
 
     // Update is called once per frame
     void Update()
-    {
-        switch (myState)
-        {
-            case State.idle:
-                UpdateIdle(); break;
-            case State.patrol:
-                UpdatePatrol(); break;
-            case State.pursue:
-                UpdatePursue(); break;
-            case State.dead:
-                UpdateDead(); break;
-        }
-
-
-        
-    }
-
-    void UpdateIdle()
     {
         Vector3 forwardDirection = transform.forward;
 
@@ -44,32 +25,19 @@ public class LineOfSightTest : MonoBehaviour
         dot = Vector3.Dot(forwardDirection, toTarget);
         if (dot < 0.8f)
         {
-            myState = State.pursue;
+            if (Physics.Raycast(transform.position, toTarget, out RaycastHit hit, targetLayers))
+                if (hit.collider.CompareTag("Player"))
+                {
+                    nav.AttemptPursue();
+                }
+                else
+                {
+                    nav.pursueDelay = 0f;
+                }
+
         }
-    }
-
-    void UpdatePatrol()
-    {
-        transform.Translate(transform.forward * -10 * Time.deltaTime);
-        float distance = Vector3.Distance(target.position, transform.position);
-        if (distance > 10)
-        {
-            UpdateDead();
-        }
-    }
-
-    void UpdatePursue()
-    {
 
     }
-
-    void UpdateDead()
-    {
-        Debug.Log("Oh no, I am dead.");
-    }
-
-
-
 
 
     private void OnDrawGizmos()
