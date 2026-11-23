@@ -1,10 +1,9 @@
 using UnityEngine;
 using UnityEngine.AI;
-using System.Collections.Generic;
-using Unity.VisualScripting;
+using UnityEngine.SceneManagement;
 
 
-public class Navigator : MonoBehaviour
+public class EnemyScript : MonoBehaviour
 {
     [Header("Navigation")]
     [SerializeField] NavMeshAgent agent;
@@ -14,9 +13,11 @@ public class Navigator : MonoBehaviour
     [SerializeField] Transform pursuePoint;
     [SerializeField] Transform playerTarget;
 
-    enum State { patrol, pursue, investigate };
+    public enum State { patrol, pursue, investigate };
     [Header("States")]
-    [SerializeField] State myState = State.patrol;
+    [SerializeField] public State myState = State.patrol;
+    [SerializeField] GameObject Exclamation;
+    [SerializeField] GameObject Question;
 
     [Header("Delays")]
     public float pursueDelay;
@@ -25,10 +26,7 @@ public class Navigator : MonoBehaviour
 
     [Header("Bools")]
     bool heardSomething;
-
-    NavMeshPath currentPath;
-    Queue<Vector3> remainingPoints;
-
+    public bool pursueCheck;
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
@@ -36,10 +34,7 @@ public class Navigator : MonoBehaviour
         agent = GetComponent<NavMeshAgent>();
 
         currentPatrolPoint = patrolPoints[0];
-        agent.SetDestination(currentPatrolPoint.position);
-
-        currentPath = new NavMeshPath();
-        remainingPoints = new Queue<Vector3>();        
+        agent.SetDestination(currentPatrolPoint.position);     
     }
 
     // Update is called once per frame
@@ -54,10 +49,14 @@ public class Navigator : MonoBehaviour
             case State.investigate:
                 UpdateInvestigate(); break;
         }
-
     }
+    //Runs every frame while patroling
     void UpdatePatrol()
     {
+        if (!pursueCheck && pursueDelay > 0)
+        {
+            pursueDelay -= Time.deltaTime/2;
+        }
         float distance = Vector3.Distance(transform.position, currentPatrolPoint.position);
 
         if (distance < 1)
@@ -69,10 +68,10 @@ public class Navigator : MonoBehaviour
             }
             currentPatrolPoint = patrolPoints[PatrolPointIndex];
             agent.SetDestination(currentPatrolPoint.position);
-
         }
     }
 
+    //Runs Every frame while pursuing
     void UpdatePursue()
     {
         float distanceToPoint = Vector3.Distance(transform.position, pursuePoint.position);
@@ -83,19 +82,23 @@ public class Navigator : MonoBehaviour
         }
         else if (distanceToPlayer < 0.5f)
         {
-            
+            SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
         }
         else
         {
             pursueDelay = 0;
             myState = State.investigate;
+            Exclamation.SetActive(false);
+            Question.SetActive(true);
         }
     }
 
+    //Runs Every Frame in while in the investigate state
     void UpdateInvestigate()
     {
-        investigateDelay += Time.deltaTime;
-        if (investigateDelay > 1)
+        if(investigateDelay <= 1f)
+            investigateDelay += Time.deltaTime;
+        else if (investigateDelay > 1f)
         {
             agent.isStopped = false;
             agent.SetDestination(pursuePoint.position);
@@ -104,15 +107,22 @@ public class Navigator : MonoBehaviour
 
             if(distanceToPoint < 1)
             {
-                waitTime += Time.deltaTime;
-                if(waitTime > 2)
+                if(waitTime <= 2)
+                    waitTime += Time.deltaTime;
+                else if(waitTime > 2)
                 {
+                    Question.SetActive(false);
                     agent.SetDestination(currentPatrolPoint.position);
                     waitTime = 0;
                     investigateDelay = 0;
                     pursueDelay = 0;
+                    heardSomething = false;
                     myState = State.patrol;
                 }
+            }
+            else
+            {
+                if (waitTime != 0) waitTime = 0;
             }
         }
     }
@@ -130,20 +140,28 @@ public class Navigator : MonoBehaviour
             Debug.Log("What Was That?");
             pursuePoint.position = new Vector3(hit.collider.transform.position.x, 0, hit.collider.transform.position.z);
             myState = State.investigate;
+            Question.SetActive(true);
         }
     }
 
     //While player is in Line of Sight
     public void AttemptPursue()
     {
+        pursueCheck = true;
         Debug.Log("Attempting Pursue...");
-        pursueDelay += Time.deltaTime;
-        if (pursueDelay > 2f)
+        if(pursueDelay <= 1f)
+            pursueDelay += Time.deltaTime;
+        else if (pursueDelay > 1f)
         {
             myState = State.pursue;
+            agent.isStopped = false;
+            Question.SetActive(false);
+            Exclamation.SetActive(true);
             heardSomething = false;
         }
     }
+
+    //Stop the Agent's Movement
     public void StopAgent()
     {
         agent.isStopped = true;
