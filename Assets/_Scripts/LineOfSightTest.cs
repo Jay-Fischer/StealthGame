@@ -6,9 +6,12 @@ public class LineOfSightTest : MonoBehaviour
 
     [Header("Targeting")]
     [SerializeField] Transform target;
+    [SerializeField] Transform pursuePoint;
+    [SerializeField] Transform rayEmmision;
     Navigator nav;
     public LayerMask targetLayers;
     float dot;
+    float maxDistance = 10;
 
     private void Awake()
     {
@@ -22,24 +25,23 @@ public class LineOfSightTest : MonoBehaviour
 
         Vector3 toTarget = (target.position - transform.position).normalized;
 
+        Debug.DrawRay(rayEmmision.position, toTarget * maxDistance, Color.red);
         dot = Vector3.Dot(forwardDirection, toTarget);
-        if (dot < 0.8f)
+        if (dot > 0.8f)
         {
-            if (Physics.Raycast(transform.position, toTarget, out RaycastHit hit, targetLayers))
-                if (hit.collider.CompareTag("Player"))
-                {
-                    nav.AttemptPursue();
-                }
-                else
-                {
-                    nav.pursueDelay = 0f;
-                }
-
+            Debug.Log("Within LoS");
+            
+            if (Physics.Raycast(rayEmmision.position, toTarget, out RaycastHit hit, maxDistance, targetLayers))
+            {
+                pursuePoint.position = new Vector3(hit.collider.transform.position.x, 0, hit.collider.transform.position.z);
+                nav.AttemptPursue();
+                Debug.Log("Hit Player");
+            }
+                
         }
-
     }
 
-
+    /*
     private void OnDrawGizmos()
     {
 
@@ -54,5 +56,5 @@ public class LineOfSightTest : MonoBehaviour
             Gizmos.color = Color.green;
         }
         Gizmos.DrawLine(transform.position, endPoint);
-    }
+    }*/
 }
